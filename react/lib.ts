@@ -1,6 +1,10 @@
+"use server";
+
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import apiClient from "./app/apiClient";
+import { AxiosError } from "axios";
 
 const secretKey = "cat123";
 const key = new TextEncoder().encode(secretKey);
@@ -22,14 +26,34 @@ export async function decrypt(input: string): Promise<any> {
 
 export async function login(formData: FormData) {
   // Verify credentials && get the user
-  const user = { email: formData.get("email"), name: "John" };
+  let user = {
+    email: formData.get("email"),
+    password: formData.get("password"),
+  };
 
-  // Create the session
-  const expires = new Date(Date.now() + 3600 * 1000);
-  const session = await encrypt({ user, expires });
+  try {
+    const res = await apiClient.post("/auth", user);
+    // @ts-ignore
+    user.token = res.headers["x-auth-token"];
 
-  // Save the session in a cookie
-  cookies().set("session", session, { expires, httpOnly: true });
+    // Create the session
+    const expires = new Date(Date.now() + 3600 * 1000);
+    const session = await encrypt({ user, expires });
+
+    // Save the session in a cookie
+    cookies().set("session", session, { expires, httpOnly: true });
+    return {
+      status: true,
+      data: res.data,
+    };
+  } catch (err: unknown) {
+    if (err instanceof AxiosError) {
+      return {
+        status: false,
+        data: err.response?.data,
+      };
+    }
+  }
 }
 
 export async function logout() {

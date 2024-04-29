@@ -7,6 +7,7 @@ export default async function Page() {
   return (
     <section>
       <h1 className="text-center">Your Profile</h1>
+      <p>User email: {profileObject.user.email}</p>
       <pre>{profile}</pre>
     </section>
   );
